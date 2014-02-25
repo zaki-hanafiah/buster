@@ -36,22 +36,33 @@ def main():
         static_path = os.path.join(os.getcwd(), 'static')
 
     if arguments['generate']:
-        command = ("wget \\"
-                   "--recursive \\"             # follow links to download entire site
-                   "--convert-links \\"         # make links relative
-                   "--page-requisites \\"       # grab everything: css / inlined images
-                   "--no-parent \\"             # don't go to parent level
-                   "--directory-prefix {1} \\"  # download contents to static/ folder
-                   "--no-host-directories \\"   # don't create domain named folder
+        command = ("wget "
+                   "--recursive "             # follow links to download entire site
+                   "--convert-links "         # make links relative
+                   "--page-requisites "       # grab everything: css / inlined images
+                   "--no-parent "             # don't go to parent level
+                   "--directory-prefix {1} "  # download contents to static/ folder
+                   "--no-host-directories "   # don't create domain named folder
+                   "--restrict-file-names=unix "
                    "{0}").format(arguments['--domain'], static_path)
         os.system(command)
 
         # remove query string since Ghost 0.4
-        file_regex = re.compile(r'.*?(\?.*)')
+        file_regex = re.compile(r".*?(@.*)")
+        html_regex = re.compile(r".*?(\.html)")
+        print "Checking path: ", static_path
         for root, dirs, filenames in os.walk(static_path):
             for filename in filenames:
+                if html_regex.match(filename):
+                    path = ("{0}").format(os.path.join(root, filename).replace("\\", "/"))
+                    with open(path, "r+") as f:
+                        file_contents = f.read()
+                        file_contents = file_contents.replace(arguments['--domain'], "")
+                        f.seek(0)
+                        f.write(file_contents)
+                        f.close()
                 if file_regex.match(filename):
-                    newname = re.sub(r'\?.*', '', filename)
+                    newname = re.sub(r'@.*', '', filename)
                     print "Rename", filename, "=>", newname
                     os.rename(os.path.join(root, filename), os.path.join(root, newname))
 
@@ -128,3 +139,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+    
