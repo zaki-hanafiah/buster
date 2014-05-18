@@ -58,6 +58,7 @@ def main():
                     with open(path, "r+") as f:
                         file_contents = f.read()
                         file_contents = file_contents.replace(arguments['--domain'], "")
+                        file_contents = file_contents.replace("%hurl%", arguments['--domain']) # This allows us to use %hurl% (short for home url, and it's fun to type) inline and have http://127.0.0.1:2368 output in the html
                         f.seek(0)
                         f.write(file_contents)
                         f.close()
