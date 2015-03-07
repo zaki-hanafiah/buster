@@ -66,9 +66,13 @@ def main():
                         f.close()
                 if file_regex.match(filename):
                     newname = re.sub(r'@.*', '', filename)
-                    print "Rename", filename, "=>", newname
-                    os.remove(os.path.join(root, newname))
-                    os.rename(os.path.join(root, filename), os.path.join(root, newname))
+                    newpath = os.path.join(root, newname)
+                    try:
+                        os.remove(newpath)
+                    except OSError:
+                        pass
+
+                    os.rename(os.path.join(root, filename), newpath)
 
         # remove superfluous "index.html" from relative hyperlinks found in text
         abs_url_regex = re.compile(r'^(?:[a-z]+:)?//', flags=re.IGNORECASE)
@@ -91,9 +95,15 @@ def main():
             for filename in fnmatch.filter(filenames, "*.html"):
                 filepath = os.path.join(root, filename)
                 parser = 'html'
-                if root.endswith("/rss"):  # rename rss index.html to index.rss
+                if root.endswith(os.path.sep + "rss"):  # rename rss index.html to index.rss
                     parser = 'xml'
                     newfilepath = os.path.join(root, os.path.splitext(filename)[0] + ".rss")
+                    
+                    try:
+                        os.remove(newfilepath)
+                    except OSError:
+                        pass
+
                     os.rename(filepath, newfilepath)
                     filepath = newfilepath
                 with open(filepath) as f:
