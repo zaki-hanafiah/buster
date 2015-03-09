@@ -2,7 +2,7 @@
 
 Usage:
   buster.py setup [--gh-repo=<repo-url>] [--dir=<path>]
-  buster.py generate [--domain=<local-address>] [--dir=<path>]
+  buster.py generate [--domain=<local-address>] [--dir=<path>] [--github-id=<github-id>]
   buster.py preview [--dir=<path>]
   buster.py deploy [--dir=<path>]
   buster.py add-domain <domain-name> [--dir=<path>]
@@ -14,6 +14,7 @@ Options:
   --version                 Show version.
   --dir=<path>              Absolute path of directory to store static pages.
   --domain=<local-address>  Address of local ghost installation [default: localhost:2368].
+  --github-id=<github-id>   Your Github ID for http://github-id.github.io URL
   --gh-repo=<repo-url>      URL of your gh-pages repository.
 """
 
@@ -36,6 +37,11 @@ def main():
         static_path = arguments['--dir']
     else:
         static_path = os.path.join(os.getcwd(), 'static')
+
+    if arguments['--github-id'] is not None:
+        github_url = "{}.github.io".format(arguments['--github-id'])
+    else:
+        github_url = None
 
     if arguments['generate']:
         command = ("wget "
@@ -64,7 +70,7 @@ def main():
         os.system(command)
         command = base_command.format(arguments['--domain'], static_path, "sitemap-tags.xml")
         os.system(command)
-        
+
         # remove query string since Ghost 0.4
         file_regex = re.compile(r'.*?(\?.*)')
         for root, dirs, filenames in os.walk(static_path):
@@ -76,6 +82,7 @@ def main():
 
         # remove superfluous "index.html" from relative hyperlinks found in text
         abs_url_regex = re.compile(r'^(?:[a-z]+:)?//', flags=re.IGNORECASE)
+
         def fixLinks(text, parser):
             d = PyQuery(bytes(bytearray(text, encoding='utf-8')), parser=parser)
             for element in d('a'):
@@ -106,6 +113,27 @@ def main():
                 newtext = fixLinks(filetext, parser)
                 with open(filepath, 'w') as f:
                     f.write(newtext)
+
+        def trans_local_domain_to_github_pages(text):
+            modified_text = text.replace('localhost:2368', github_url)
+            return modified_text
+
+        def remove_v_tag_in_css_and_html(text):
+            modified_text = re.sub(r"%3Fv=[\d|\w]+\.css", "", text)
+            modified_text = re.sub(r".js%3Fv=[\d|\w]+", ".js", modified_text)
+            return modified_text
+
+        for root, dirs, filenames in os.walk(static_path):
+            for filename in filenames:
+                if filename.endswith(('.html', '.xml', '.xsl', '.rss')):
+                    filepath = os.path.join(root, filename)
+                    with open(filepath) as f:
+                        filetext = f.read()
+                    print "fixing local domain in ", filepath
+                    newtext = trans_local_domain_to_github_pages(filetext)
+                    newtext = remove_v_tag_in_css_and_html(newtext)
+                    with open(filepath, 'w') as f:
+                        f.write(newtext)
 
     elif arguments['preview']:
         os.chdir(static_path)
