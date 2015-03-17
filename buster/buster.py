@@ -31,6 +31,9 @@ from pyquery import PyQuery
 
 
 def main():
+    is_windows = os.name == 'nt'
+    query_string_separator = '@' if is_windows else '#'
+
     arguments = docopt(__doc__, version='0.1.3')
     if arguments['--dir'] is not None:
         static_path = arguments['--dir']
@@ -40,22 +43,25 @@ def main():
     if arguments['generate']:
         command = ("wget "
                    "--recursive "             # follow links to download entire site
-                   # "--convert-links "         # make links relative
+                   "{2} "         # make links relative
                    "--page-requisites "       # grab everything: css / inlined images
                    "--no-parent "             # don't go to parent level
                    "--directory-prefix {1} "  # download contents to static/ folder
                    "--no-host-directories "   # don't create domain named folder
-                   "--restrict-file-name=windows "  # don't escape query string
-                   "{0}").format(arguments['--domain'], static_path)
-        os.system(command)
+                   "--restrict-file-name={3} "  # don't escape query string
+                   "{0}").format(arguments['--domain'], static_path, '' if is_windows else '--convert-links', 'windows' if is_windows else 'unix')
+        result = os.system(command)
+
+        if result > 0:
+            raise IOError('Your ghost server is dead')
 
         # remove query string since Ghost 0.4
-        file_regex = re.compile(r'.*?(@.*)')
+        file_regex = re.compile(r'.*?(' + query_string_separator + '.*)')
         html_regex = re.compile(r".*?(\.html)")
 
         for root, dirs, filenames in os.walk(static_path):
             for filename in filenames:
-                if html_regex.match(filename):
+                if is_windows and html_regex.match(filename):
                     path = ("{0}").format(os.path.join(root, filename).replace("\\", "/"))
                     with open(path, "r+") as f:
                         file_contents = f.read()
@@ -65,7 +71,7 @@ def main():
                         f.write(file_contents)
                         f.close()
                 if file_regex.match(filename):
-                    newname = re.sub(r'@.*', '', filename)
+                    newname = re.sub(query_string_separator + r'.*', '', filename)
                     newpath = os.path.join(root, newname)
                     try:
                         os.remove(newpath)
@@ -99,12 +105,12 @@ def main():
 
         # fix links in all html files
         for root, dirs, filenames in os.walk(static_path):
-            for filename in fnmatch.filter(filenames, "*.html"):
+            for filename in fnmatch.filter(filenames, '*.html'):
                 filepath = os.path.join(root, filename)
                 parser = 'html'
-                if root.endswith(os.path.sep + "rss"):  # rename rss index.html to index.rss
+                if root.endswith(os.path.sep + 'rss'):  # rename rss index.html to index.rss
                     parser = 'xml'
-                    newfilepath = os.path.join(root, os.path.splitext(filename)[0] + ".rss")
+                    newfilepath = os.path.join(root, os.path.splitext(filename)[0] + '.rss')
                     
                     try:
                         os.remove(newfilepath)
@@ -115,7 +121,7 @@ def main():
                     filepath = newfilepath
                 with open(filepath) as f:
                     filetext = f.read().decode('utf8')
-                print "fixing links in ", filepath
+                print 'fixing links in ', filepath
                 newtext = fixLinks(filetext, parser)
                 with open(filepath, 'w') as f:
                     f.write(newtext)
