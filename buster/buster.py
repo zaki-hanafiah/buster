@@ -78,14 +78,21 @@ def main():
         abs_url_regex = re.compile(r'^(?:[a-z]+:)?//', flags=re.IGNORECASE)
         def fixLinks(text, parser):
             d = PyQuery(bytes(bytearray(text, encoding='utf-8')), parser=parser)
-            for element in d('a'):
+            for element in d('a, link'):
                 e = PyQuery(element)
                 href = e.attr('href')
+
+                if href is None:
+                    continue
+
+                new_href = re.sub(r'(rss/index\.html)|(rss/?)$', 'rss/index.rss', href)
                 if not abs_url_regex.search(href):
-                    new_href = re.sub(r'rss/index\.html$', 'rss/index.rss', href)
                     new_href = re.sub(r'/index\.html$', '/', new_href)
+
+                if href != new_href:
                     e.attr('href', new_href)
                     print "\t", href, "=>", new_href
+
             if parser == 'html':
                 return d.html(method='html').encode('utf8')
             return d.__unicode__().encode('utf8')
