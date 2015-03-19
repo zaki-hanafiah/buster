@@ -10,6 +10,15 @@ Start with a clean, no commits Github repository.
 
 Warning! This project is a hack. It's not official. But it works for me.
 
+
+Windows fork
+============
+
+This fork made using ghost possible on windows. Until original repository owner shows himself and pulls my PR, you can use this version. 
+To install, use 
+`pip install git+https://github.com/Misiur/buster`
+
+
 The interface
 -------------
 
