@@ -51,7 +51,7 @@ def main():
                    "--no-parent "             # don't go to parent level
                    "--directory-prefix {1} "  # download contents to static/ folder
                    "--no-host-directories "   # don't create domain named folder
-                   "--restrict-file-name=nocontrol "  # don't escape query string
+                   "--restrict-file-name=unix "  # don't escape query string
                    "{0}").format(arguments['--domain'], static_path)
         os.system(command)
 
@@ -94,8 +94,8 @@ def main():
                     e.attr('href', new_href)
                     print "\t", href, "=>", new_href
             if parser == 'html':
-                return d.html(method='html').encode('utf8')
-            return d.__unicode__().encode('utf8')
+                return "<!DOCTYPE html>\n<html>" + pqd.html(method='html').encode('utf8') + "</html>"
+            return "<!DOCTYPE html>\n<html>" + pqd.__unicode__().encode('utf8') + "</html>"
 
         # fix links in all html files
         for root, dirs, filenames in os.walk(static_path):
