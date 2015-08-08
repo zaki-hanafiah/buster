@@ -48,6 +48,17 @@ def main():
                    "--restrict-file-name=unix "  # don't escape query string
                    "{0}").format(arguments['--domain'], static_path)
         os.system(command)
+        
+        command = ("wget "
+                   "--convert-links "         # make links relative
+                   "--page-requisites "       # grab everything: css / inlined images
+                   "--no-parent "             # don't go to parent level
+                   "--directory-prefix {1} "  # download contents to static/ folder
+                   "--no-host-directories "   # don't create domain named folder
+                   "--restrict-file-name=unix "  # don't escape query string
+                   "--content-on-error "      # fetch content on 404 error
+                   "{0}/404.html").format(arguments['--domain'], static_path)
+        os.system(command)
 
         # remove query string since Ghost 0.4
         file_regex = re.compile(r'.*?(\?.*)')
