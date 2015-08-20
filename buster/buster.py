@@ -51,7 +51,7 @@ def main():
 
         def pullRss(path):
             for feed in os.listdir(static_path + "/" + path):
-                rsspath = "/" + path + "/" + feed + "/rss"
+                rsspath = "/" + path + "/" + feed + "/rss/"
                 rssdir = static_path + rsspath
                 os.mkdir(rssdir)
                 command = ("wget "
