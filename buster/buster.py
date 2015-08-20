@@ -49,6 +49,20 @@ def main():
                    "{0}").format(arguments['--domain'], static_path)
         os.system(command)
 
+        for dir in os.listdir(static_path + "/tag"):
+            os.mkdir(static_path + "/tag/" + dir + "/rss")
+            command = ("wget "
+                       "--output-document=" + static_path + "/tag/" + dir + "/rss/index.html "
+                       "{0}/tag/" + dir + "/rss").format(arguments['--domain'])
+            os.system(command)
+        for dir in os.listdir(static_path + "/author"):
+            os.mkdir(static_path + "/author/" + dir + "/rss")
+            command = ("wget "
+                       "--output-document=" + static_path + "/author/" + dir + "/rss/index.html "
+                       "{0}/tag/" + dir + "/rss").format(arguments['--domain'])
+            os.system(command)
+
+
         # remove query string since Ghost 0.4
         file_regex = re.compile(r'.*?(\?.*)')
         for root, dirs, filenames in os.walk(static_path):
