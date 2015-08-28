@@ -99,7 +99,7 @@ def main():
                 if root.endswith("/rss"):  # rename rss index.html to index.rss
                     parser = 'xml'
                     newfilepath = os.path.join(root, os.path.splitext(filename)[0] + ".rss")
-                    os.rename(filepath, newfilepath)
+                    shutil.copy(filepath, newfilepath)
                     filepath = newfilepath
                 with open(filepath) as f:
                     filetext = f.read().decode('utf8')
@@ -110,7 +110,7 @@ def main():
 
         # fix all localhost references, if new domain given
         if arguments['--new-domain']:
-            filetypes = ['*.html', '*.xml', '*.xsl', 'robots.txt']
+            filetypes = ['*.html', '*.xml', '*.xsl', '*.rss', 'robots.txt']
             for root, dirs, filenames in os.walk(static_path):
                 for extension in filetypes:
                     for filename in fnmatch.filter(filenames, extension):
