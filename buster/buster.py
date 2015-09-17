@@ -105,7 +105,7 @@ def main():
                     filetext = f.read().decode('utf8')
                 print "fixing links in ", filepath
                 newtext = fixLinks(filetext, parser)
-                newtext = '<!DOCTYPE html>\n' + newtext # add doctype html to all html files
+                newtext = '<!DOCTYPE html>\n' + newtext + '</html> # add doctype html to all html files
                 with open(filepath, 'w') as f:
                     f.write(newtext)
 
