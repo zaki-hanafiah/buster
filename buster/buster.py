@@ -2,7 +2,7 @@
 
 Usage:
   buster.py setup [--gh-repo=<repo-url>] [--dir=<path>]
-  buster.py generate [--domain=<local-address>] [--dir=<path>]
+  buster.py generate [--domain=<local-address>] [--dir=<path>] [--new-domain=<remote-address>]
   buster.py preview [--dir=<path>]
   buster.py deploy [--dir=<path>]
   buster.py add-domain <domain-name> [--dir=<path>]
@@ -10,11 +10,12 @@ Usage:
   buster.py --version
 
 Options:
-  -h --help                 Show this screen.
-  --version                 Show version.
-  --dir=<path>              Absolute path of directory to store static pages.
-  --domain=<local-address>  Address of local ghost installation [default: localhost:2368].
-  --gh-repo=<repo-url>      URL of your gh-pages repository.
+  -h --help                         Show this screen.
+  --version                         Show version.
+  --dir=<path>                      Absolute path of directory to store static pages.
+  --domain=<local-address>          Address of local ghost installation [default: localhost:2368].
+  --gh-repo=<repo-url>              URL of your gh-pages repository.
+  --new-domain=<remote-address>     Address of the remote static web location.
 """
 
 import os
@@ -24,6 +25,7 @@ import fnmatch
 import shutil
 import SocketServer
 import SimpleHTTPServer
+import codecs
 from docopt import docopt
 from time import gmtime, strftime
 from git import Repo
@@ -48,6 +50,17 @@ def main():
                    "--restrict-file-name=unix "  # don't escape query string
                    "{0}").format(arguments['--domain'], static_path)
         os.system(command)
+        
+        command = ("wget "
+                   "--convert-links "         # make links relative
+                   "--page-requisites "       # grab everything: css / inlined images
+                   "--no-parent "             # don't go to parent level
+                   "--directory-prefix {1} "  # download contents to static/ folder
+                   "--no-host-directories "   # don't create domain named folder
+                   "--restrict-file-name=unix "  # don't escape query string
+                   "--content-on-error "      # fetch content on 404 error
+                   "{0}/404.html").format(arguments['--domain'], static_path)
+        os.system(command)
 
         # remove query string since Ghost 0.4
         file_regex = re.compile(r'.*?(\?.*)')
@@ -65,6 +78,10 @@ def main():
             for element in d('a'):
                 e = PyQuery(element)
                 href = e.attr('href')
+                
+                if href is None:
+                    continue
+
                 if not abs_url_regex.search(href):
                     new_href = re.sub(r'rss/index\.html$', 'rss/index.rss', href)
                     new_href = re.sub(r'/index\.html$', '/', new_href)
@@ -82,14 +99,29 @@ def main():
                 if root.endswith("/rss"):  # rename rss index.html to index.rss
                     parser = 'xml'
                     newfilepath = os.path.join(root, os.path.splitext(filename)[0] + ".rss")
-                    os.rename(filepath, newfilepath)
+                    shutil.copy(filepath, newfilepath)
                     filepath = newfilepath
                 with open(filepath) as f:
                     filetext = f.read().decode('utf8')
                 print "fixing links in ", filepath
                 newtext = fixLinks(filetext, parser)
+                newtext = '<!DOCTYPE html>\n' + newtext + '</html>' # add doctype html to all html files
                 with open(filepath, 'w') as f:
                     f.write(newtext)
+
+        # fix all localhost references, if new domain given
+        if arguments['--new-domain']:
+            filetypes = ['*.html', '*.xml', '*.xsl', '*.rss', 'robots.txt']
+            for root, dirs, filenames in os.walk(static_path):
+                for extension in filetypes:
+                    for filename in fnmatch.filter(filenames, extension):
+                        filepath = os.path.join(root, filename)
+                        with codecs.open(filepath, encoding='utf8') as f:
+                            filetext = f.read()
+                            print "fixing localhost reference in ", filepath
+                            newtext = re.sub(r"%s" % arguments['--domain'], arguments['--new-domain'], filetext)
+                        with codecs.open(filepath, 'w', 'utf-8-sig') as f:
+                            f.write(newtext)
 
     elif arguments['preview']:
         os.chdir(static_path)
