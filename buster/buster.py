@@ -94,8 +94,8 @@ def main():
                     e.attr('href', new_href)
                     print "\t", href, "=>", new_href
             if parser == 'html':
-                return "<!DOCTYPE html>\n<html>" + pqd.html(method='html').encode('utf8') + "</html>"
-            return "<!DOCTYPE html>\n<html>" + pqd.__unicode__().encode('utf8') + "</html>"
+                return "<!DOCTYPE html>\n<html>" + d.html(method='html').encode('utf8') + "</html>"
+            return "<!DOCTYPE html>\n<html>" + d.__unicode__().encode('utf8') + "</html>"
 
         # fix links in all html files
         for root, dirs, filenames in os.walk(static_path):
@@ -121,11 +121,17 @@ def main():
         def remove_v_tag_in_css_and_html(text):
             modified_text = re.sub(r"%3Fv=[\d|\w]+\.css", "", text)
             modified_text = re.sub(r".js%3Fv=[\d|\w]+", ".js", modified_text)
+            modified_text = re.sub(r".woff%3Fv=[\d|\w]+", ".woff", modified_text)
+            modified_text = re.sub(r".ttf%3Fv=[\d|\w]+", ".ttf", modified_text)
+
+            modified_text = re.sub(r"css\.html", "css", modified_text)
+            modified_text = re.sub(r"png\.html", "png", modified_text)
+            modified_text = re.sub(r"jpg\.html", "jpg", modified_text)
             return modified_text
 
         for root, dirs, filenames in os.walk(static_path):
             for filename in filenames:
-                if filename.endswith(('.html', '.xml', '.xsl', '.rss')):
+                if filename.endswith(('.html', '.xml', '.css', '.xsl', '.rss')):
                     filepath = os.path.join(root, filename)
                     with open(filepath) as f:
                         filetext = f.read()
