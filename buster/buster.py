@@ -85,12 +85,16 @@ def main():
 
         def fixLinks(text, parser):
             d = PyQuery(bytes(bytearray(text, encoding='utf-8')), parser=parser)
-            for element in d('a'):
+            for element in d('a, link'):
                 e = PyQuery(element)
                 href = e.attr('href')
-                if not abs_url_regex.search(href):
-                    new_href = re.sub(r'rss/index\.html$', 'rss/index.rss', href)
-                    new_href = re.sub(r'/index\.html$', '/', new_href)
+
+                if href is None:
+                    continue
+                if (not abs_url_regex.search(href)) or ('/rss/' in href):
+                    new_href = re.sub(r'rss/$', 'rss/index.rss', href)
+                    new_href = re.sub(r'index\.html$', '', new_href)
+                    new_href = re.sub(r'index\.html\#$', '', new_href)
                     e.attr('href', new_href)
                     print "\t", href, "=>", new_href
             if parser == 'html':
@@ -127,6 +131,7 @@ def main():
             modified_text = re.sub(r"css\.html", "css", modified_text)
             modified_text = re.sub(r"png\.html", "png", modified_text)
             modified_text = re.sub(r"jpg\.html", "jpg", modified_text)
+
             return modified_text
 
         for root, dirs, filenames in os.walk(static_path):
