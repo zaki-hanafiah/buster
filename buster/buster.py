@@ -45,6 +45,7 @@ def main():
 
     if arguments['generate']:
         command = ("wget "
+                   "--level=0 "               # set level to infinitive
                    "--recursive "             # follow links to download entire site
                    "--convert-links "         # make links relative
                    "--page-requisites "       # grab everything: css / inlined images
