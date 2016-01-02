@@ -147,7 +147,7 @@ def main():
         # Add README
         file_path = os.path.join(static_path, 'README.md')
         with open(file_path, 'w') as f:
-            f.write('# Blog\nPowered by [Ghost](http://ghost.org) and [Buster](https://github.com/axitkhurana/buster/).\n')
+            f.write('# Blog\nPowered by [Ghost](http://ghost.org) and [Buster](https://github.com/invictusjs/buster/).\n')
 
         print "All set! You can generate and deploy now."
 
