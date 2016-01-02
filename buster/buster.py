@@ -2,7 +2,7 @@
 
 Usage:
   buster.py setup [--gh-repo=<repo-url>] [--dir=<path>]
-  buster.py generate [--domain=<local-address>] [--dir=<path>]
+  buster.py generate [--localhost=<local-address>] [--public=<public-domain>] [--dir=<path>]
   buster.py preview [--dir=<path>]
   buster.py deploy [--dir=<path>]
   buster.py add-domain <domain-name> [--dir=<path>]
@@ -10,11 +10,12 @@ Usage:
   buster.py --version
 
 Options:
-  -h --help                 Show this screen.
-  --version                 Show version.
-  --dir=<path>              Absolute path of directory to store static pages.
-  --domain=<local-address>  Address of local ghost installation [default: localhost:2368].
-  --gh-repo=<repo-url>      URL of your gh-pages repository.
+  -h --help                    Show this screen.
+  --version                    Show version.
+  --dir=<path>                 Absolute path of directory to store static pages.
+  --localhost=<local-address>  Address of local ghost installation [default: localhost:2368].
+  --public=<public-domain>     The public domain name of the blog.
+  --gh-repo=<repo-url>         URL of your gh-pages repository.
 """
 
 import os
@@ -46,7 +47,7 @@ def main():
                    "--directory-prefix {1} "  # download contents to static/ folder
                    "--no-host-directories "   # don't create domain named folder
                    "--restrict-file-name=unix "  # don't escape query string
-                   "{0}").format(arguments['--domain'], static_path)
+                   "{0}").format(arguments['--localhost'], static_path)
         os.system(command)
 
         # remove query string since Ghost 0.4
@@ -66,8 +67,8 @@ def main():
                 e = PyQuery(element)
                 href = e.attr('href')
                 if not abs_url_regex.search(href):
-                    new_href = re.sub(r'rss/index\.html$', 'rss/index.rss', href)
-                    new_href = re.sub(r'/index\.html$', '/', new_href)
+                    new_href = re.sub(r'/index\.html$', '/', href)
+                    new_href = re.sub(r'index.html', '/', new_href)
                     e.attr('href', new_href)
                     print "\t", href, "=>", new_href
             if parser == 'html':
@@ -79,9 +80,9 @@ def main():
             for filename in fnmatch.filter(filenames, "*.html"):
                 filepath = os.path.join(root, filename)
                 parser = 'html'
-                if root.endswith("/rss"):  # rename rss index.html to index.rss
+                if root.endswith("/rss"):  # rename rss index.html to index.xml
                     parser = 'xml'
-                    newfilepath = os.path.join(root, os.path.splitext(filename)[0] + ".rss")
+                    newfilepath = os.path.join(root, os.path.splitext(filename)[0] + ".xml")
                     os.rename(filepath, newfilepath)
                     filepath = newfilepath
                 with open(filepath) as f:
@@ -90,6 +91,19 @@ def main():
                 newtext = fixLinks(filetext, parser)
                 with open(filepath, 'w') as f:
                     f.write(newtext)
+
+        # replace local url with public blog url
+        if arguments['--public'] is not None:
+            print "replace", arguments['--localhost'], "with", arguments['--public']
+            for root, dirs, filenames in os.walk(static_path):
+                for filename in filenames:
+                    filepath = os.path.join(root, filename)
+                    with open(filepath) as f:
+                        filetext = f.read()
+                    newtext = filetext.replace(arguments['--localhost'],
+                            arguments['--public'])
+                    with open(filepath, "w") as f:
+                        f.write(newtext)
 
     elif arguments['preview']:
         os.chdir(static_path)
