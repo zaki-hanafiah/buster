@@ -4,7 +4,7 @@ Usage:
   buster.py setup [--gh-repo=<repo-url>] [--dir=<path>]
   buster.py generate [--localhost=<local-address>] [--public=<public-domain>] [--dir=<path>]
   buster.py preview [--dir=<path>]
-  buster.py deploy [--dir=<path>]
+  buster.py deploy [--dir=<path>] [--date=<date>]
   buster.py add-domain <domain-name> [--dir=<path>]
   buster.py (-h | --help)
   buster.py --version
@@ -16,6 +16,7 @@ Options:
   --localhost=<local-address>  Address of local ghost installation [default: localhost:2368].
   --public=<public-domain>     The public domain name of the blog.
   --gh-repo=<repo-url>         URL of your gh-pages repository.
+  --date=<date>                Set author date and commiter date of the commit
 """
 
 import os
@@ -27,8 +28,10 @@ import SocketServer
 import SimpleHTTPServer
 from docopt import docopt
 from time import gmtime, strftime
+from datetime import datetime
 from git import Repo
 from pyquery import PyQuery
+from dateutil.tz import tzlocal
 
 
 def main():
@@ -158,6 +161,16 @@ def main():
         repo.git.add('.')
 
         current_time = strftime("%Y-%m-%d %H:%M:%S", gmtime())
+        if arguments['--date'] is not None:
+            datetimeObj = datetime.strptime(arguments['--date'], "%Y-%m-%d %H:%M:%S")
+            datetimeObj = datetimeObj.replace(tzinfo=tzlocal())
+            current_time_with_tz = datetimeObj.strftime("%Y-%m-%d %H:%M:%S %z")
+            print current_time_with_tz
+
+            os.environ["GIT_AUTHOR_DATE"] = current_time_with_tz
+            os.environ["GIT_COMMITTER_DATE"] = current_time_with_tz
+            current_time = datetimeObj.strftime("%Y-%m-%d %H:%M:%S")
+
         repo.index.commit('Blog update at {}'.format(current_time))
 
         origin = repo.remotes.origin
