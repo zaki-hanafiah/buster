@@ -27,7 +27,7 @@ import shutil
 import SocketServer
 import SimpleHTTPServer
 from docopt import docopt
-from time import gmtime, strftime
+from time import localtime, strftime
 from datetime import datetime
 from git import Repo
 from pyquery import PyQuery
@@ -160,12 +160,11 @@ def main():
         repo = Repo(static_path)
         repo.git.add('.')
 
-        current_time = strftime("%Y-%m-%d %H:%M:%S", gmtime())
+        current_time = strftime("%Y-%m-%d %H:%M:%S", localtime())
         if arguments['--date'] is not None:
             datetimeObj = datetime.strptime(arguments['--date'], "%Y-%m-%d %H:%M:%S")
             datetimeObj = datetimeObj.replace(tzinfo=tzlocal())
             current_time_with_tz = datetimeObj.strftime("%Y-%m-%d %H:%M:%S %z")
-            print current_time_with_tz
 
             os.environ["GIT_AUTHOR_DATE"] = current_time_with_tz
             os.environ["GIT_COMMITTER_DATE"] = current_time_with_tz
