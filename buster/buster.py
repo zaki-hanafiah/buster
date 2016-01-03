@@ -96,6 +96,8 @@ def main():
         if arguments['--public'] is not None:
             print "replace", arguments['--localhost'], "with", arguments['--public']
             for root, dirs, filenames in os.walk(static_path):
+                if '.git' in dirs:
+                    dirs.remove('.git')
                 for filename in filenames:
                     filepath = os.path.join(root, filename)
                     with open(filepath) as f:
