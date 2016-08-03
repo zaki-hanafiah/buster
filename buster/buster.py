@@ -49,6 +49,19 @@ def main():
                    "{0}").format(arguments['--domain'], static_path)
         os.system(command)
 
+        def pullRss(path):
+            for feed in os.listdir(static_path + "/" + path):
+                rsspath = "/" + path + "/" + feed + "/rss/"
+                rssdir = static_path + rsspath
+                os.mkdir(rssdir)
+                command = ("wget "
+                       "--output-document=" + rssdir + "/index.html "
+                       "{0}" + rsspath).format(arguments['--domain'])
+                os.system(command)
+        pullRss("tag")
+        pullRss("author")
+
+
         # remove query string since Ghost 0.4
         file_regex = re.compile(r'.*?(\?.*)')
         for root, dirs, filenames in os.walk(static_path):
