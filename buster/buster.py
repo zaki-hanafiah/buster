@@ -29,6 +29,14 @@ from time import gmtime, strftime
 from git import Repo
 from pyquery import PyQuery
 
+def mkdir_p(path):
+    try:
+        os.makedirs(path)
+    except OSError as exc:  # Python >2.5
+        if os.path.isdir(path):
+            pass
+        else:
+            raise
 
 def main():
     arguments = docopt(__doc__, version='0.1.3')
@@ -50,14 +58,24 @@ def main():
         os.system(command)
 
         def pullRss(path):
-            for feed in os.listdir(static_path + "/" + path):
-                rsspath = "/" + path + "/" + feed + "/rss/"
-                rssdir = static_path + rsspath
-                os.mkdir(rssdir)
+            if path is None:
+                baserssdir = static_path + "/rss"
+                mkdir_p(baserssdir)
                 command = ("wget "
-                       "--output-document=" + rssdir + "/index.html "
-                       "{0}" + rsspath).format(arguments['--domain'])
+                "--output-document=" + baserssdir + "/feed.rss "
+                "{0}" + '/rss/').format(arguments['--domain'])
                 os.system(command)
+            else:
+                for feed in os.listdir(static_path + "/" + path):
+                    rsspath = "/" + path + "/" + feed + "/rss/"
+                    rssdir = static_path + rsspath
+                    mkdir_p(rssdir)
+                    command = ("wget "
+                           "--output-document=" + rssdir + "/index.html "
+                           "{0}" + rsspath).format(arguments['--domain'])
+                    os.system(command)
+
+        pullRss(None)
         pullRss("tag")
         pullRss("author")
 
