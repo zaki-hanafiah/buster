@@ -2,19 +2,21 @@
 
 Usage:
   buster.py setup [--gh-repo=<repo-url>] [--dir=<path>]
-  buster.py generate [--domain=<local-address>] [--dir=<path>]
+  buster.py generate [--localhost=<local-address>] [--public=<public-domain>] [--dir=<path>]
   buster.py preview [--dir=<path>]
-  buster.py deploy [--dir=<path>]
+  buster.py deploy [--dir=<path>] [--date=<date>]
   buster.py add-domain <domain-name> [--dir=<path>]
   buster.py (-h | --help)
   buster.py --version
 
 Options:
-  -h --help                 Show this screen.
-  --version                 Show version.
-  --dir=<path>              Absolute path of directory to store static pages.
-  --domain=<local-address>  Address of local ghost installation [default: localhost:2368].
-  --gh-repo=<repo-url>      URL of your gh-pages repository.
+  -h --help                    Show this screen.
+  --version                    Show version.
+  --dir=<path>                 Absolute path of directory to store static pages.
+  --localhost=<local-address>  Address of local ghost installation [default: localhost:2368].
+  --public=<public-domain>     The public domain name of the blog.
+  --gh-repo=<repo-url>         URL of your gh-pages repository.
+  --date=<date>                Set author date and commiter date of the commit
 """
 
 import os
@@ -25,9 +27,11 @@ import shutil
 import SocketServer
 import SimpleHTTPServer
 from docopt import docopt
-from time import gmtime, strftime
+from time import localtime, strftime
+from datetime import datetime
 from git import Repo
 from pyquery import PyQuery
+from dateutil.tz import tzlocal
 
 def mkdir_p(path):
     try:
@@ -50,14 +54,19 @@ def main():
 
     if arguments['generate']:
         command = ("wget "
+                   "--level {4} "             # recursion depth
                    "--recursive "             # follow links to download entire site
-                   "{2} "         # make links relative
+                   "{2} "                     # make links relative
                    "--page-requisites "       # grab everything: css / inlined images
                    "--no-parent "             # don't go to parent level
                    "--directory-prefix {1} "  # download contents to static/ folder
                    "--no-host-directories "   # don't create domain named folder
                    "--restrict-file-name={3} "  # don't escape query string
-                   "{0}").format(arguments['--domain'], static_path, '' if is_windows else '--convert-links', 'windows' if is_windows else 'unix')
+                   "{0}").format(arguments['--domain'],
+                           static_path,
+                           ('' if is_windows else '--convert-links'),
+                           ('windows' if is_windows else 'unix'),
+                           arguments['--level'] or 0)
         result = os.system(command)
 
         if result > 0:
@@ -84,7 +93,6 @@ def main():
         pullRss(None)
         pullRss("tag")
         pullRss("author")
-
 
         # remove query string since Ghost 0.4
         file_regex = re.compile(r'.*?(' + query_string_separator + '.*)')
@@ -157,6 +165,21 @@ def main():
                 with open(filepath, 'w') as f:
                     f.write(newtext)
 
+        # replace local url with public blog url
+        if arguments['--public'] is not None:
+            print "replace", arguments['--localhost'], "with", arguments['--public']
+            for root, dirs, filenames in os.walk(static_path):
+                if '.git' in dirs:
+                    dirs.remove('.git')
+                for filename in filenames:
+                    filepath = os.path.join(root, filename)
+                    with open(filepath) as f:
+                        filetext = f.read()
+                    newtext = filetext.replace(arguments['--localhost'],
+                            arguments['--public'])
+                    with open(filepath, "w") as f:
+                        f.write(newtext)
+
     elif arguments['preview']:
         os.chdir(static_path)
 
@@ -199,7 +222,7 @@ def main():
         # Add README
         file_path = os.path.join(static_path, 'README.md')
         with open(file_path, 'w') as f:
-            f.write('# Blog\nPowered by [Ghost](http://ghost.org) and [Buster](https://github.com/axitkhurana/buster/).\n')
+            f.write('# Blog\nPowered by [Ghost](http://ghost.org) and [Buster](https://github.com/invictusjs/buster/).\n')
 
         print "All set! You can generate and deploy now."
 
@@ -207,7 +230,16 @@ def main():
         repo = Repo(static_path)
         repo.git.add('.')
 
-        current_time = strftime("%Y-%m-%d %H:%M:%S", gmtime())
+        current_time = strftime("%Y-%m-%d %H:%M:%S", localtime())
+        if arguments['--date'] is not None:
+            datetimeObj = datetime.strptime(arguments['--date'], "%Y-%m-%d %H:%M:%S")
+            datetimeObj = datetimeObj.replace(tzinfo=tzlocal())
+            current_time_with_tz = datetimeObj.strftime("%Y-%m-%d %H:%M:%S %z")
+
+            os.environ["GIT_AUTHOR_DATE"] = current_time_with_tz
+            os.environ["GIT_COMMITTER_DATE"] = current_time_with_tz
+            current_time = datetimeObj.strftime("%Y-%m-%d %H:%M:%S")
+
         repo.index.commit('Blog update at {}'.format(current_time))
 
         origin = repo.remotes.origin
