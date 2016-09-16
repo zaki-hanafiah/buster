@@ -1,7 +1,7 @@
-Buster
-======
+Buster (Seb's fork)
+===================
 
-Super simple, Totally awesome, Brute force **static site generator for**
+Super simple, totally awesome, brute force **static site generator for**
 `Ghost <http://ghost.org>`__.
 
 Start with a clean, no commits Github repository.
@@ -10,12 +10,33 @@ Start with a clean, no commits Github repository.
 
 Warning! This project is a hack. It's not official. But it works for me.
 
-Windows fork
+About this fork
 ============
 
-This fork made using ghost possible on windows. Until original repository owner shows himself and pulls my PR, you can use this version. 
-To install, use 
-``pip install git+https://github.com/Misiur/buster``
+This is a work in progress containing many of the pull requests made to the
+original buster repo (which unfortunately has been abandoned by its author).
+
+It includes most of the changes by
+
+* petemichel77
+* Misiur
+* Jeongseok Son
+* raccoony
+* leftofnull
+* alokard
+
+It should also work with static pages (e.g. `about`, `tag/...`, etc.).
+
+There may well be issues still, especially around Windows compatibility; I'm
+happy to merge your PRs.
+
+Installation
+===========
+With `pip` installed, simply run
+
+``pip install git+https://github.com/skosch/buster``
+
+You could also just clone the source and use the ``buster.py`` file directly.
 
 
 The interface
@@ -47,18 +68,6 @@ creates one during ``setup`` command). You can specify custom directory
 path using ``[--dir=<path>]`` option to any of the above commands.
 
 Don't forget to change your blog URL in config.js in Ghost.
-
-
-The Installation
-----------------
-
-Installing Buster is easy with pip:
-
-    $ pip install buster
-
-You'll then have the wonderful ``buster`` command available.
-
-You could also clone the source and use the ``buster.py`` file directly.
 
 Requirements
 ------------
@@ -102,11 +111,5 @@ Inspired by THE GhostBusters.
 Contributing
 ------------
 
-Checkout the existing
-`issues <https://github.com/axitkhurana/buster/issues>`__ or create a
-new one. Pull requests welcome!
+Checkout the existing `issues <https://github.com/skosch/buster/issues>`__ or create a new one. Pull requests welcome (actually, this time)!
 
---------------
-
-*Made with* `jugaad <http://en.wikipedia.org/wiki/Jugaad>`__ *in*
-`Dilli <http://en.wikipedia.org/wiki/Delhi>`__.
