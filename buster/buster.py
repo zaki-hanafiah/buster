@@ -2,7 +2,7 @@
 
 Usage:
   buster.py setup [--gh-repo=<repo-url>] [--dir=<path>]
-  buster.py generate [--localhost=<local-address>] [--public=<public-domain>] [--dir=<path>]
+  buster.py generate [--domain=<local-address>] [--public=<public-domain>] [--dir=<path>] [--level=<level>]
   buster.py preview [--dir=<path>]
   buster.py deploy [--dir=<path>] [--date=<date>]
   buster.py add-domain <domain-name> [--dir=<path>]
@@ -13,10 +13,11 @@ Options:
   -h --help                    Show this screen.
   --version                    Show version.
   --dir=<path>                 Absolute path of directory to store static pages.
-  --localhost=<local-address>  Address of local ghost installation [default: localhost:2368].
+  --domain=<local-address>     Address of local ghost installation [default: localhost:2368].
   --public=<public-domain>     The public domain name of the blog.
   --gh-repo=<repo-url>         URL of your gh-pages repository.
   --date=<date>                Set author date and commiter date of the commit
+  --level=<level>              Set wget level of recursion [default: 0 (infinite)]
 """
 
 import os
@@ -26,6 +27,7 @@ import fnmatch
 import shutil
 import SocketServer
 import SimpleHTTPServer
+import lxml
 from docopt import docopt
 from time import localtime, strftime
 from datetime import datetime
@@ -52,6 +54,8 @@ def main():
     else:
         static_path = os.path.join(os.getcwd(), 'static')
 
+    domain = arguments.get('--domain', 'http://localhost:2368')
+
     if arguments['generate']:
         command = ("wget "
                    "--level {4} "             # recursion depth
@@ -62,32 +66,52 @@ def main():
                    "--directory-prefix {1} "  # download contents to static/ folder
                    "--no-host-directories "   # don't create domain named folder
                    "--restrict-file-name={3} "  # don't escape query string
-                   "{0}").format(arguments['--domain'],
+                   "{0}").format(
+                           domain,
                            static_path,
                            ('' if is_windows else '--convert-links'),
                            ('windows' if is_windows else 'unix'),
-                           arguments['--level'] or 0)
+                           arguments.get('--level', 0))
         result = os.system(command)
+
+        # also (separately) go get the 404 page
+        command = ("wget "
+                   "--convert-links "         # make links relative
+                   "--page-requisites "       # grab everything: css / inlined images
+                   "--level {4} "             # recursion depth
+                   "{2} "                     # make links relative
+                   "--no-parent "             # don't go to parent level
+                   "--directory-prefix {1} "  # download contents to static/ folder
+                   "--no-host-directories "   # don't create domain named folder
+                   "--restrict-file-name={3} "  # don't escape query string
+                   "--content-on-error "      # fetch content on 404 error
+                   "{0}/404.html").format(
+                           domain,
+                           static_path,
+                           ('' if is_windows else '--convert-links'),
+                           ('windows' if is_windows else 'unix'),
+                           arguments.get('--level', 0))
+        os.system(command)
 
         if result > 0:
             raise IOError('Your ghost server is dead')
 
         def pullRss(path):
             if path is None:
-                baserssdir = static_path + "/rss"
+                baserssdir = os.path.join(static_path, "rss")
                 mkdir_p(baserssdir)
                 command = ("wget "
                 "--output-document=" + baserssdir + "/feed.rss "
-                "{0}" + '/rss/').format(arguments['--domain'])
+                "{0}" + '/rss/').format(domain)
                 os.system(command)
             else:
-                for feed in os.listdir(static_path + "/" + path):
-                    rsspath = "/" + path + "/" + feed + "/rss/"
-                    rssdir = static_path + rsspath
+                for feed in os.listdir(os.path.join(static_path, path)):
+                    rsspath = os.path.join(path, feed, "rss")
+                    rssdir = os.path.join(static_path, 'rss', rsspath)
                     mkdir_p(rssdir)
                     command = ("wget "
                            "--output-document=" + rssdir + "/index.html "
-                           "{0}" + rsspath).format(arguments['--domain'])
+                           "{0}/" + rsspath).format(domain)
                     os.system(command)
 
         pullRss(None)
@@ -104,8 +128,8 @@ def main():
                     path = ("{0}").format(os.path.join(root, filename).replace("\\", "/"))
                     with open(path, "r+") as f:
                         file_contents = f.read()
-                        file_contents = file_contents.replace(arguments['--domain'], "")
-                        file_contents = file_contents.replace("%hurl", arguments['--domain'])
+                        file_contents = file_contents.replace(domain, "")
+                        file_contents = file_contents.replace("%hurl", domain)
                         f.seek(0)
                         f.write(file_contents)
                         f.close()
@@ -122,6 +146,8 @@ def main():
         # remove superfluous "index.html" from relative hyperlinks found in text
         abs_url_regex = re.compile(r'^(?:[a-z]+:)?//', flags=re.IGNORECASE)
         def fixLinks(text, parser):
+            if text == '':
+                return ''
             d = PyQuery(bytes(bytearray(text, encoding='utf-8')), parser=parser)
             for element in d('a, link'):
                 e = PyQuery(element)
@@ -162,12 +188,13 @@ def main():
                     filetext = f.read().decode('utf8')
                 print 'fixing links in ', filepath
                 newtext = fixLinks(filetext, parser)
+                newtext = '<!DOCTYPE html>\n' + newtext # add doctype html to all html files
                 with open(filepath, 'w') as f:
                     f.write(newtext)
 
         # replace local url with public blog url
         if arguments['--public'] is not None:
-            print "replace", arguments['--localhost'], "with", arguments['--public']
+            print "replace", domain, "with", arguments['--public']
             for root, dirs, filenames in os.walk(static_path):
                 if '.git' in dirs:
                     dirs.remove('.git')
@@ -175,7 +202,7 @@ def main():
                     filepath = os.path.join(root, filename)
                     with open(filepath) as f:
                         filetext = f.read()
-                    newtext = filetext.replace(arguments['--localhost'],
+                    newtext = filetext.replace(domain,
                             arguments['--public'])
                     with open(filepath, "w") as f:
                         f.write(newtext)

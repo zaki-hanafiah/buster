@@ -4,7 +4,6 @@ import os
 from setuptools import setup
 from buster import _version
 
-
 setup(name="buster",
       version=_version.__version__,
       description="Static site generator for Ghost and Github",
