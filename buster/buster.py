@@ -113,7 +113,9 @@ def main():
         # remove query string since Ghost 0.4
         file_regex = re.compile(r'.*?(' + query_string_separator + '.*)')
         html_regex = re.compile(r".*?(\.html)")
+        static_page_regex = re.compile(r"^([\w-]+)$")
 
+        # make links inside blog posts relative by removing [domain]
         for root, dirs, filenames in os.walk(static_path):
             for filename in filenames:
                 if is_windows and html_regex.match(filename):
@@ -125,6 +127,7 @@ def main():
                         f.seek(0)
                         f.write(file_contents)
                         f.close()
+
                 if file_regex.match(filename):
                     newname = re.sub(query_string_separator + r'.*', '', filename)
                     newpath = os.path.join(root, newname)
@@ -132,27 +135,48 @@ def main():
                         os.remove(newpath)
                     except OSError:
                         pass
+                    shutil.move(os.path.join(root, filename), newpath)
 
-                    os.rename(os.path.join(root, filename), newpath)
+                # if we're inside static_path or static_path/tag, rename
+                # extension-less files to filename.html
+                if (root == static_path or root == os.path.join(static_path, 'tag')) and static_page_regex.match(filename):
+                    newname = filename + ".html"
+                    newpath = os.path.join(root, newname)
+                    try:
+                        os.remove(newpath)
+                    except OSError:
+                        pass
+                    shutil.move(os.path.join(root, filename), newpath)
 
-        # remove superfluous "index.html" from relative hyperlinks found in text
-        abs_url_regex = re.compile(r'^(?:[a-z]+:)?//', flags=re.IGNORECASE)
 
-        def fixLinks(text, parser):
-            if text == '':
+        abs_url_regex = re.compile(r'^(?:[a-z]+:)?//', flags=re.IGNORECASE) 
+
+        def fix_links(text, parser):
+            if text == '': # ignore empty files
                 return ''
+
             d = PyQuery(bytes(bytearray(text, encoding='utf-8')), parser=parser)
             for element in d('a, link'):
                 e = PyQuery(element)
                 href = e.attr('href')
 
-                if href is None:
+                if href is None: # ignore empty links
                     continue
-                # first, replace rss/index.html with rss/index.rss
+
+                # replace rss/index.html with rss/index.rss
                 new_href = re.sub(r'(rss/index\.html)|((?<!\.)rss/?)$', 'rss/index.rss', href)
-                if not abs_url_regex.search(href):
+
+                # in relative links, remove superfluous "/index.html"
+                if not abs_url_regex.search(href): 
                     new_href = re.sub(r'/index\.html$', '/', new_href)
 
+                    # in relative links that don't end in '/' or
+                    # '.<some_extension>', add '.html' -- they're probably static
+                    # pages!
+                    new_href = re.sub(r"/([\w-]+)$", r"/\1.html", new_href)
+                    new_href = re.sub(r"^([\w-]+)$", r"\1.html", new_href)
+
+                # update link only if necessary
                 if href != new_href:
                     e.attr('href', new_href)
                     print "\t", href, "=>", new_href
@@ -180,8 +204,7 @@ def main():
                 with open(filepath) as f:
                     filetext = f.read().decode('utf8')
                 print 'fixing links in ', filepath
-                newtext = fixLinks(filetext, parser)
-                newtext = '<!DOCTYPE html>\n' + newtext + '</html>' # add doctype html to all html files
+                newtext = fix_links(filetext, parser)
                 with open(filepath, 'w') as f:
                     f.write(newtext)
 
