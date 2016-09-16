@@ -28,6 +28,7 @@ import shutil
 import SocketServer
 import SimpleHTTPServer
 import lxml
+import codecs
 from docopt import docopt
 from time import localtime, strftime
 from datetime import datetime
@@ -174,12 +175,13 @@ def main():
                     except OSError:
                         pass
 
-                    os.rename(filepath, newfilepath)
+                    shutil.copy(filepath, newfilepath)
                     filepath = newfilepath
                 with open(filepath) as f:
                     filetext = f.read().decode('utf8')
                 print 'fixing links in ', filepath
                 newtext = fixLinks(filetext, parser)
+                newtext = '<!DOCTYPE html>\n' + newtext + '</html>' # add doctype html to all html files
                 with open(filepath, 'w') as f:
                     f.write(newtext)
 
@@ -191,7 +193,7 @@ def main():
                     dirs.remove('.git')
                 for filename in filenames:
                     filepath = os.path.join(root, filename)
-                    with open(filepath) as f:
+                    with codecs.open(filepath, encoding='utf8') as f:
                         filetext = f.read()
                     newtext = filetext.replace(domain, arguments['--public'])
                     # remove v-tags from any urls
@@ -203,7 +205,7 @@ def main():
                     newtext = re.sub(r"png\.html", "png", newtext)
                     newtext = re.sub(r"jpg\.html", "jpg", newtext)
 
-                    with open(filepath, "w") as f:
+                    with codecs.open(filepath, 'w', 'utf-8-sig') as f:
                         f.write(newtext)
 
     elif arguments['preview']:
