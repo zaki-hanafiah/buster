@@ -13,11 +13,11 @@ Options:
   -h --help                    Show this screen.
   --version                    Show version.
   --dir=<path>                 Absolute path of directory to store static pages.
-  --domain=<local-address>     Address of local ghost installation [default: localhost:2368].
+  --domain=<local-address>     Address of local ghost installation [default: http://localhost:2368].
   --public=<public-domain>     The public domain name of the blog.
   --gh-repo=<repo-url>         URL of your gh-pages repository.
   --date=<date>                Set author date and commiter date of the commit
-  --level=<level>              Set wget level of recursion [default: 0 (infinite)]
+  --level=<level>              Set wget level of recursion, defaults to infinite [default: 0]
 """
 
 import os
@@ -54,44 +54,35 @@ def main():
     else:
         static_path = os.path.join(os.getcwd(), 'static')
 
-    domain = arguments.get('--domain', 'http://localhost:2368')
+    domain = arguments['--domain']
+
+    base_command = ("wget "
+                   "--level {0} "             # recursion depth
+                   "--recursive "             # follow links to download entire site
+                   "{1} "                     # make links relative
+                   "--page-requisites "       # grab everything: css / inlined images
+                   "--no-parent "             # don't go to parent level
+                   "--directory-prefix {2} "  # download contents to static/ folder
+                   "--no-host-directories "   # don't create domain named folder
+                   "--restrict-file-name={3} "  # don't escape query string
+                   ).format(arguments['--level'],
+                           ('' if is_windows else '--convert-links'),
+                           static_path,
+                           ('windows' if is_windows else 'unix'))
 
     if arguments['generate']:
-        command = ("wget "
-                   "--level {4} "             # recursion depth
-                   "--recursive "             # follow links to download entire site
-                   "{2} "                     # make links relative
-                   "--page-requisites "       # grab everything: css / inlined images
-                   "--no-parent "             # don't go to parent level
-                   "--directory-prefix {1} "  # download contents to static/ folder
-                   "--no-host-directories "   # don't create domain named folder
-                   "--restrict-file-name={3} "  # don't escape query string
-                   "{0}").format(
-                           domain,
-                           static_path,
-                           ('' if is_windows else '--convert-links'),
-                           ('windows' if is_windows else 'unix'),
-                           arguments.get('--level', 0))
-        result = os.system(command)
+        result = os.system(base_command + " {0}".format(domain))
 
         # also (separately) go get the 404 page
-        command = ("wget "
-                   "--convert-links "         # make links relative
-                   "--page-requisites "       # grab everything: css / inlined images
-                   "--level {4} "             # recursion depth
-                   "{2} "                     # make links relative
-                   "--no-parent "             # don't go to parent level
-                   "--directory-prefix {1} "  # download contents to static/ folder
-                   "--no-host-directories "   # don't create domain named folder
-                   "--restrict-file-name={3} "  # don't escape query string
-                   "--content-on-error "      # fetch content on 404 error
-                   "{0}/404.html").format(
-                           domain,
-                           static_path,
-                           ('' if is_windows else '--convert-links'),
-                           ('windows' if is_windows else 'unix'),
-                           arguments.get('--level', 0))
-        os.system(command)
+        result = os.system(base_command + " --content-on-error {0}/404.html".format(domain))
+
+        # also (separately) get sitemap files
+        result = os.system(base_command + " {0}/sitemap.xsl".format(domain))
+        result = os.system(base_command + " {0}/sitemap.xml".format(domain))
+        result = os.system(base_command + " {0}/sitemap-pages.xml".format(domain))
+        result = os.system(base_command + " {0}/sitemap-posts.xml".format(domain))
+        result = os.system(base_command + " {0}/sitemap-authors.xml".format(domain))
+        result = os.system(base_command + " {0}/sitemap-tags.xml".format(domain))
 
         if result > 0:
             raise IOError('Your ghost server is dead')
@@ -145,6 +136,7 @@ def main():
 
         # remove superfluous "index.html" from relative hyperlinks found in text
         abs_url_regex = re.compile(r'^(?:[a-z]+:)?//', flags=re.IGNORECASE)
+
         def fixLinks(text, parser):
             if text == '':
                 return ''
@@ -155,7 +147,7 @@ def main():
 
                 if href is None:
                     continue
-
+                # first, replace rss/index.html with rss/index.rss
                 new_href = re.sub(r'(rss/index\.html)|((?<!\.)rss/?)$', 'rss/index.rss', href)
                 if not abs_url_regex.search(href):
                     new_href = re.sub(r'/index\.html$', '/', new_href)
@@ -165,8 +157,8 @@ def main():
                     print "\t", href, "=>", new_href
 
             if parser == 'html':
-                return d.html(method='html').encode('utf8')
-            return d.__unicode__().encode('utf8')
+                return "<!DOCTYPE html>\n<html>" + d.html(method='html').encode('utf8') + "</html>"
+            return "<!DOCTYPE html>\n<html>" + d.__unicode__().encode('utf8') + "</html>"
 
         # fix links in all html files
         for root, dirs, filenames in os.walk(static_path):
@@ -202,8 +194,16 @@ def main():
                     filepath = os.path.join(root, filename)
                     with open(filepath) as f:
                         filetext = f.read()
-                    newtext = filetext.replace(domain,
-                            arguments['--public'])
+                    newtext = filetext.replace(domain, arguments['--public'])
+                    # remove v-tags from any urls
+                    newtext = re.sub(r"%3Fv=[\d|\w]+\.css", "", text)
+                    newtext = re.sub(r".js%3Fv=[\d|\w]+", ".js", newtext)
+                    newtext = re.sub(r".woff%3Fv=[\d|\w]+", ".woff", newtext)
+                    newtext = re.sub(r".ttf%3Fv=[\d|\w]+", ".ttf", newtext)
+                    newtext = re.sub(r"css\.html", "css", newtext)
+                    newtext = re.sub(r"png\.html", "png", newtext)
+                    newtext = re.sub(r"jpg\.html", "jpg", newtext)
+
                     with open(filepath, "w") as f:
                         f.write(newtext)
 
