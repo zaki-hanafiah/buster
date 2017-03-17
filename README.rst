@@ -34,7 +34,7 @@ Installation
 ===========
 With `pip` installed, simply run
 
-``pip install git+https://github.com/skosch/buster``
+``pip install git+https://github.com/boggin/buster``
 
 You could also just clone the source and use the ``buster.py`` file directly.
 
