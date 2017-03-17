@@ -103,7 +103,7 @@ Buster?
 
 Inspired by THE GhostBusters.
 
-.. figure:: https://upload.wikimedia.org/wikipedia/commons/1/12/Lego_Ghostbusters_%282914485906%29.jpg
+.. figure:: https://upload.wikimedia.org/wikipedia/commons/thumb/1/12/Lego_Ghostbusters_%282914485906%29.jpg/320px-Lego_Ghostbusters_%282914485906%29.jpg?uselang=en-gb
    :alt: Ghost Buster Movie Poster
 
    Ghost Buster Movie
