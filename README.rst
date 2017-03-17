@@ -103,7 +103,7 @@ Buster?
 
 Inspired by THE GhostBusters.
 
-.. figure:: http://upload.wikimedia.org/wikipedia/en/c/c7/Ghostbusters_cover.png
+.. figure:: https://upload.wikimedia.org/wikipedia/commons/1/12/Lego_Ghostbusters_%282914485906%29.jpg
    :alt: Ghost Buster Movie Poster
 
    Ghost Buster Movie
@@ -111,5 +111,5 @@ Inspired by THE GhostBusters.
 Contributing
 ------------
 
-Checkout the existing `issues <https://github.com/skosch/buster/issues>`__ or create a new one. Pull requests welcome (actually, this time)!
+Checkout the existing `issues <https://github.com/boggin/buster/issues>`__ or create a new one. Pull requests welcome (actually, this time)!
 
