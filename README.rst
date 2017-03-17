@@ -1,5 +1,5 @@
-Buster (Seb's fork)
-===================
+Buster
+======
 
 Super simple, totally awesome, brute force **static site generator for**
 `Ghost <http://ghost.org>`__.
