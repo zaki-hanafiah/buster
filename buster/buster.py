@@ -20,21 +20,28 @@ Options:
   --level=<level>              Set wget level of recursion, defaults to infinite [default: 0]
 """
 
+from future import standard_library
+
+standard_library.install_aliases()
+import http.server
+import socketserver
+import codecs
+import fnmatch
 import os
 import re
-import sys
-import fnmatch
 import shutil
-import SocketServer
-import SimpleHTTPServer
-import lxml
-import codecs
-from docopt import docopt
-from time import localtime, strftime
+import sys
 from datetime import datetime
+from time import localtime, strftime
+
+from dateutil.tz import tzlocal
+from docopt import docopt
 from git import Repo
 from pyquery import PyQuery
-from dateutil.tz import tzlocal
+
+__version_info__ = (0, 1, 4)
+version = '.'.join(map(str, __version_info__))
+
 
 def mkdir_p(path):
     try:
@@ -45,11 +52,12 @@ def mkdir_p(path):
         else:
             raise
 
+
 def main():
     is_windows = os.name == 'nt'
     query_string_separator = '@' if is_windows else '#'
 
-    arguments = docopt(__doc__, version='0.1.3')
+    arguments = docopt(__doc__, version=version)
     if arguments['--dir'] is not None:
         static_path = arguments['--dir']
     else:
@@ -58,43 +66,43 @@ def main():
     domain = arguments['--domain']
 
     base_command = ("wget "
-                   "--level {0} "             # recursion depth
-                   "--recursive "             # follow links to download entire site
-                   "{1} "                     # make links relative
-                   "--page-requisites "       # grab everything: css / inlined images
-                   "--no-parent "             # don't go to parent level
-                   "--directory-prefix {2} "  # download contents to static/ folder
-                   "--no-host-directories "   # don't create domain named folder
-                   "--restrict-file-name={3} "  # don't escape query string
-                   ).format(arguments['--level'],
-                           ('' if is_windows else '--convert-links'),
-                           static_path,
-                           ('windows' if is_windows else 'unix'))
+                    "--level {0} "  # recursion depth
+                    "--recursive "  # follow links to download entire site
+                    "{1} "  # make links relative
+                    "--page-requisites "  # grab everything: css / inlined images
+                    "--no-parent "  # don't go to parent level
+                    "--directory-prefix {2} "  # download contents to static/ folder
+                    "--no-host-directories "  # don't create domain named folder
+                    "--restrict-file-name={3} "  # don't escape query string
+                    ).format(arguments['--level'],
+                             ('' if is_windows else '--convert-links'),
+                             static_path,
+                             ('windows' if is_windows else 'unix'))
 
     if arguments['generate']:
-        result = os.system(base_command + " {0}".format(domain))
-
-        # also (separately) go get the 404 page
-        result = os.system(base_command + " --content-on-error {0}/404.html".format(domain))
-
-        # also (separately) get sitemap files
-        result = os.system(base_command + " {0}/sitemap.xsl".format(domain))
-        result = os.system(base_command + " {0}/sitemap.xml".format(domain))
-        result = os.system(base_command + " {0}/sitemap-pages.xml".format(domain))
-        result = os.system(base_command + " {0}/sitemap-posts.xml".format(domain))
-        result = os.system(base_command + " {0}/sitemap-authors.xml".format(domain))
-        result = os.system(base_command + " {0}/sitemap-tags.xml".format(domain))
-
-        if result > 0:
-            raise IOError('Your ghost server is dead')
+        # the 404 first
+        os.system(base_command + " --content-on-error {0}/404.html".format(domain))
+        for path in (
+                " {0}",  # the index
+                " {0}/sitemap.xsl",  # ... and all the sitemap files
+                " {0}/sitemap.xml",
+                " {0}/sitemap-pages.xml",
+                " {0}/sitemap-posts.xml",
+                " {0}/sitemap-authors.xml",
+                " {0}/sitemap-tags.xml",
+        ):
+            result = os.system(base_command + path.format(domain))
+            if result > 0:
+                raise IOError('Your ghost server is dead.'
+                              'Cannot access %s' % path.format(domain))
 
         def pullRss(path):
             if path is None:
                 baserssdir = os.path.join(static_path, "rss")
                 mkdir_p(baserssdir)
                 command = ("wget "
-                "--output-document=" + baserssdir + "/feed.rss "
-                "{0}" + '/rss/').format(domain)
+                           "--output-document=" + baserssdir + "/feed.rss "
+                                                               "{0}" + '/rss/').format(domain)
                 os.system(command)
             else:
                 for feed in os.listdir(os.path.join(static_path, path)):
@@ -102,8 +110,8 @@ def main():
                     rssdir = os.path.join(static_path, 'rss', rsspath)
                     mkdir_p(rssdir)
                     command = ("wget "
-                           "--output-document=" + rssdir + "/index.html "
-                           "{0}/" + rsspath).format(domain)
+                               "--output-document=" + rssdir + "/index.html "
+                                                               "{0}/" + rsspath).format(domain)
                     os.system(command)
 
         pullRss(None)
@@ -119,7 +127,7 @@ def main():
         for root, dirs, filenames in os.walk(static_path):
             for filename in filenames:
                 if is_windows and html_regex.match(filename):
-                    path = ("{0}").format(os.path.join(root, filename).replace("\\", "/"))
+                    path = "{0}".format(os.path.join(root, filename).replace("\\", "/"))
                     with open(path, "r+") as f:
                         file_contents = f.read()
                         file_contents = file_contents.replace(domain, "")
@@ -139,7 +147,9 @@ def main():
 
                 # if we're inside static_path or static_path/tag, rename
                 # extension-less files to filename.html
-                if (root == static_path or root == os.path.join(static_path, 'tag')) and static_page_regex.match(filename):
+                if (root == static_path or root == os.path.join(static_path,
+                                                                'tag')) and static_page_regex.match(
+                    filename):
                     newname = filename + ".html"
                     newpath = os.path.join(root, newname)
                     try:
@@ -148,11 +158,10 @@ def main():
                         pass
                     shutil.move(os.path.join(root, filename), newpath)
 
-
-        abs_url_regex = re.compile(r'^(?:[a-z]+:)?//', flags=re.IGNORECASE) 
+        abs_url_regex = re.compile(r'^(?:[a-z]+:)?//', flags=re.IGNORECASE)
 
         def fix_links(text, parser):
-            if text == '': # ignore empty files
+            if text == '':  # ignore empty files
                 return ''
 
             d = PyQuery(bytes(bytearray(text, encoding='utf-8')), parser=parser)
@@ -160,14 +169,14 @@ def main():
                 e = PyQuery(element)
                 href = e.attr('href')
 
-                if href is None: # ignore empty links
+                if href is None:  # ignore empty links
                     continue
 
                 # replace rss/index.html with rss/index.rss
                 new_href = re.sub(r'(rss/index\.html)|((?<!\.)rss/?)$', 'rss/index.rss', href)
 
                 # in relative links, remove superfluous "/index.html"
-                if not abs_url_regex.search(href): 
+                if not abs_url_regex.search(href):
                     new_href = re.sub(r'/index\.html$', '/', new_href)
 
                     # in relative links that don't end in '/' or
@@ -179,11 +188,11 @@ def main():
                 # update link only if necessary
                 if href != new_href:
                     e.attr('href', new_href)
-                    print "\t", href, "=>", new_href
+                    print("\t", href, "=>", new_href)
 
             if parser == 'html':
-                return "<!DOCTYPE html>\n<html>" + d.html(method='html').encode('utf8') + "</html>"
-            return "<!DOCTYPE html>\n<html>" + d.__unicode__().encode('utf8') + "</html>"
+                return "<!DOCTYPE html>\n<html>" + d.html(method='html') + "</html>"
+            return "<!DOCTYPE html>\n<html>" + str(d) + "</html>"
 
         # fix links in all html files
         for root, dirs, filenames in os.walk(static_path):
@@ -193,7 +202,7 @@ def main():
                 if root.endswith(os.path.sep + 'rss'):  # rename rss index.html to index.rss
                     parser = 'xml'
                     newfilepath = os.path.join(root, os.path.splitext(filename)[0] + '.rss')
-                    
+
                     try:
                         os.remove(newfilepath)
                     except OSError:
@@ -201,26 +210,30 @@ def main():
 
                     shutil.copy(filepath, newfilepath)
                     filepath = newfilepath
-                with open(filepath) as f:
-                    filetext = f.read().decode('utf8')
-                print 'fixing links in ', filepath
+                with open(filepath, encoding='utf-8') as f:
+                    filetext = f.read()
+                print('fixing links in ', filepath)
                 newtext = fix_links(filetext, parser)
                 with open(filepath, 'w') as f:
                     f.write(newtext)
 
         # replace local url with public blog url
         if arguments['--public'] is not None:
-            print "replace", domain, "with", arguments['--public']
+            print("replace", domain, "with", arguments['--public'])
+
             for root, dirs, filenames in os.walk(static_path):
                 if '.git' in dirs:
                     dirs.remove('.git')
                 for filename in filenames:
                     filepath = os.path.join(root, filename)
-                    with codecs.open(filepath, encoding='utf8') as f:
-                        filetext = f.read()
+                    with codecs.open(filepath) as f:
+                        try:
+                            filetext = f.read()
+                        except UnicodeDecodeError:
+                            continue
                     newtext = filetext.replace(domain, arguments['--public'])
                     # remove v-tags from any urls
-                    newtext = re.sub(r"%3Fv=[\d|\w]+\.css", "", text)
+                    newtext = re.sub(r"%3Fv=[\d|\w]+\.css", "", newtext)
                     newtext = re.sub(r".js%3Fv=[\d|\w]+", ".js", newtext)
                     newtext = re.sub(r".woff%3Fv=[\d|\w]+", ".woff", newtext)
                     newtext = re.sub(r".ttf%3Fv=[\d|\w]+", ".ttf", newtext)
@@ -234,10 +247,10 @@ def main():
     elif arguments['preview']:
         os.chdir(static_path)
 
-        Handler = SimpleHTTPServer.SimpleHTTPRequestHandler
-        httpd = SocketServer.TCPServer(("", 9000), Handler)
+        Handler = http.server.SimpleHTTPRequestHandler
+        httpd = socketserver.TCPServer(("", 9000), Handler)
 
-        print "Serving at port 9000"
+        print("Serving at port 9000")
         # gracefully handle interrupt here
         httpd.serve_forever()
 
@@ -245,12 +258,12 @@ def main():
         if arguments['--gh-repo']:
             repo_url = arguments['--gh-repo']
         else:
-            repo_url = raw_input("Enter the Github repository URL:\n").strip()
+            repo_url = input("Enter the Github repository URL:\n").strip()
 
         # Create a fresh new static files directory
         if os.path.isdir(static_path):
-            confirm = raw_input("This will destroy everything inside static/."
-                                " Are you sure you want to continue? (y/N)").strip()
+            confirm = input("This will destroy everything inside static/."
+                            " Are you sure you want to continue? (y/N)").strip()
             if confirm != 'y' and confirm != 'Y':
                 sys.exit(0)
             shutil.rmtree(static_path)
@@ -273,10 +286,10 @@ def main():
         # Add README
         file_path = os.path.join(static_path, 'README.md')
         with open(file_path, 'w') as f:
-            f.write('# Blog\nPowered by [Ghost](http://ghost.org) and [Buster](https://github.com/invictusjs/buster/).\n')
+            f.write(
+                '# Blog\nPowered by [Ghost](http://ghost.org) and [Buster](https://github.com/invictusjs/buster/).\n')
 
-        print "All set! You can generate and deploy now."
-
+        print("All set! You can generate and deploy now.")
     elif arguments['deploy']:
         repo = Repo(static_path)
         repo.git.add('.')
@@ -295,22 +308,20 @@ def main():
 
         origin = repo.remotes.origin
         repo.git.execute(['git', 'push', '-u', origin.name,
-                         repo.active_branch.name])
-        print "Good job! Deployed to Github Pages."
+                          repo.active_branch.name])
+        print("Good job! Deployed to Github Pages.")
 
     elif arguments['add-domain']:
-        repo = Repo(static_path)
         custom_domain = arguments['<domain-name>']
 
         file_path = os.path.join(static_path, 'CNAME')
         with open(file_path, 'w') as f:
             f.write(custom_domain + '\n')
 
-        print "Added CNAME file to repo. Use `deploy` to deploy"
-
+        print("Added CNAME file to repo. Use `deploy` to deploy")
     else:
-        print __doc__
+        print(__doc__)
+
 
 if __name__ == '__main__':
     main()
-    

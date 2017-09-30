@@ -24,6 +24,7 @@ It includes most of the changes by
 * raccoony
 * leftofnull
 * alokard
+* dariosky
 
 It should also work with static pages (e.g. `about`, `tag/...`, etc.).
 
@@ -111,5 +112,6 @@ Inspired by THE GhostBusters.
 Contributing
 ------------
 
-Checkout the existing `issues <https://github.com/skosch/buster/issues>`__ or create a new one. Pull requests welcome (actually, this time)!
+Checkout the existing `issues <https://github.com/skosch/buster/issues>`__ or create a new one.
+ Pull requests welcome (actually, this time)!
 

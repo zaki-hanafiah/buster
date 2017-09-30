@@ -1,11 +1,11 @@
 #!/usr/bin/env python
 
-import os
 from setuptools import setup
-from buster import _version
+
+from buster import version
 
 setup(name="buster",
-      version=_version.__version__,
+      version=version,
       description="Static site generator for Ghost and Github",
       long_description=open("README.rst").read(),
       author="Akshit Khurana",
