@@ -20,9 +20,14 @@ Options:
   --level=<level>              Set wget level of recursion, defaults to infinite [default: 0]
 """
 
-from future import standard_library
+from __future__ import (absolute_import, division,
+                        print_function, unicode_literals)
+from builtins import (
+    bytes, dict, int, list, object, range, str,
+    ascii, chr, hex, input, next, oct, open,
+    pow, round, super,
+    filter, map, zip)
 
-standard_library.install_aliases()
 import http.server
 import socketserver
 import codecs
@@ -210,7 +215,7 @@ def main():
 
                     shutil.copy(filepath, newfilepath)
                     filepath = newfilepath
-                with open(filepath, encoding='utf-8') as f:
+                with codecs.open(filepath, encoding='utf-8') as f:
                     filetext = f.read()
                 print('fixing links in ', filepath)
                 newtext = fix_links(filetext, parser)
@@ -226,7 +231,7 @@ def main():
                     dirs.remove('.git')
                 for filename in filenames:
                     filepath = os.path.join(root, filename)
-                    with codecs.open(filepath) as f:
+                    with codecs.open(filepath, encoding='utf-8') as f:
                         try:
                             filetext = f.read()
                         except UnicodeDecodeError:
@@ -241,8 +246,11 @@ def main():
                     newtext = re.sub(r"png\.html", "png", newtext)
                     newtext = re.sub(r"jpg\.html", "jpg", newtext)
 
-                    with codecs.open(filepath, 'w', 'utf-8-sig') as f:
-                        f.write(newtext)
+                    with codecs.open(filepath, 'w') as f:
+                        if sys.version_info >= (3,):
+                            f.write(newtext)
+                        else:
+                            f.write(newtext.encode('utf-8'))
 
     elif arguments['preview']:
         os.chdir(static_path)
