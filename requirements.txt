@@ -1,7 +1,11 @@
-GitPython==0.3.2.RC1
-async==0.6.1
-docopt==0.6.1
-gitdb==0.5.4
+GitPython==2.1.7
 pyquery==1.2.8
-smmap==0.8.2
-pyquery==1.2.8
+python-dateutil
+
+# command line arguments via doc
+docopt
+
+# py2 py3 compatibility layer
+future
+
+pytest
