@@ -7,7 +7,7 @@ from buster import version
 setup(name="buster",
       version=version,
       description="Static site generator for Ghost and Github",
-      long_description=open("README.md").read(),
+      long_description=open("README.rst").read(),
       author="Akshit Khurana",
       author_email="axitkhurana@gmail.com",
       url="https://github.com/boggin/buster",
