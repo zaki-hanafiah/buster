@@ -25,7 +25,7 @@ It includes most of the changes by
 * leftofnull
 * alokard
 * dariosky
-* 
+* skosch
 
 It should also work with static pages (e.g. `about`, `tag/...`, etc.).
 
@@ -36,10 +36,11 @@ Installation
 ===========
 
 Dependencies you may need:
-`pip install future`
-`pip install python-dateutil`
-`pip install gitdb2==2.0.0`
-`pip install GitPython==2.1.7`
+
+- `pip install future`
+- `pip install python-dateutil`
+- `pip install gitdb2==2.0.0`
+- `pip install GitPython==2.1.7`
 
 With `pip` installed, simply run
 
