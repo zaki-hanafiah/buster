@@ -1,4 +1,4 @@
-Buster (Seb's fork)
+Buster (Zakhov's fork)
 ===================
 
 Super simple, totally awesome, brute force **static site generator for**
@@ -25,6 +25,7 @@ It includes most of the changes by
 * leftofnull
 * alokard
 * dariosky
+* 
 
 It should also work with static pages (e.g. `about`, `tag/...`, etc.).
 
@@ -33,11 +34,20 @@ happy to merge your PRs.
 
 Installation
 ===========
+
+Dependencies you may need:
+`pip install future`
+`pip install python-dateutil`
+`pip install gitdb2==2.0.0`
+`pip install GitPython==2.1.7`
+
 With `pip` installed, simply run
 
-``pip install git+https://github.com/skosch/buster``
+``pip install git+https://github.com/zaki-hanafiah/buster``
 
 You could also just clone the source and use the ``buster.py`` file directly.
+
+*If you encounter any issues upon install, make sure to install the dependencies listed above.
 
 
 The interface
